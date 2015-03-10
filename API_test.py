@@ -1,7 +1,8 @@
+#! /usr/bin/env python
 print('Importing libraries...')
 import requests
 import xml.etree.cElementTree as ET
-from operator import itemgetter
+# from operator import itemgetter
 
 # payload = {'characterID': 94974374, 'userID': 3723024, 'apiKey': '6dTF197MfAXDUadEzcIUD49WcFXEhRSGTht7cV9qBJ38hEa3b7ksgMFZhmHPgbG2'}
 # r = requests.get("http://api.eveonline.com/eve/CharacterInfo.xml.aspx", params=payload)
@@ -13,7 +14,7 @@ from operator import itemgetter
 # payload = {'characterID': 94974374, 'keyID': 3723024, 'vCode': '6dTF197MfAXDUadEzcIUD49WcFXEhRSGTht7cV9qBJ38hEa3b7ksgMFZhmHPgbG2'}
 # r = requests.get("http://api.eveonline.com/char/CharacterSheet.xml.aspx", params=payload)
 # charRoot = ET.fromstring(r.text)
-print('Accessing skills api...')
+print('Accessing skills API...')
 skillTree = requests.get("https://api.eveonline.com/eve/SkillTree.xml.aspx")
 skillRoot = ET.fromstring(skillTree.text)
 
@@ -21,11 +22,11 @@ skillDictionary = {}
 skillGroups = {}
 skills = {}
 charSkills = {}
+char = {'characterID': '', 'keyID': '', 'vCode': ''}
 
-
-def list_char_skills(characterID, keyID, vCode):
-	print('Fetching character\'s skills...')
-	payload = {'characterID': characterID, 'keyID': keyID, 'vCode': vCode}
+def build_char_skill_list(payload):
+	print('Accessing character API...')
+	# payload = {'characterID': characterID, 'keyID': keyID, 'vCode': vCode}
 	r = requests.get("http://api.eveonline.com/char/CharacterSheet.xml.aspx", params=payload)
 	charRoot = ET.fromstring(r.text)
 	for row in charRoot.find('.//rowset[@name="skills"]'):
@@ -55,20 +56,25 @@ def lookup_group(search_id):
 def get_skill_level(skillName):
 	return(int(charSkills[skillName]))
 
-def display_char_skills():
-	print('\nAll skill groups:')
-	for l in sorted(charSkills.values()):
-		print('[{}] {}: {}'.format(l[0], l[2], l[3]))
-
 def display_char_skills(group):
-	print('\n\n\'{}\':'.format(group))
-	for l in sorted(charSkills.values()):
-		if (l[0] == group):
-			print('   {}: {}'.format(l[2], l[3]))
+	if group == '':
+		print('\nAll skill groups:')
+		for l in sorted(charSkills.values()):
+			print('[{}] {}: {}'.format(l[0], l[2], l[3]))
+	else:
+		print('\n\n\'{}\':'.format(group))
+		for l in sorted(charSkills.values()):
+			if (l[0] == group):
+				print('   {}: {}'.format(l[2], l[3]))
+
+def load_credentials(filename):
+	f = open(filename, 'r')
+	char['characterID'] = f.readline()
+	char['keyID'] = f.readline()
+	char['vCode'] = f.readline()
 
 build_skill_dictionary()
-list_char_skills('94974374', '3723024', '6dTF197MfAXDUadEzcIUD49WcFXEhRSGTht7cV9qBJ38hEa3b7ksgMFZhmHPgbG2')
-display_char_skills('Trade')
+load_credentials('sephrim_rega.txt')
+build_char_skill_list(char)
+display_char_skills('')
 # print(get_skill_level('Retail'))
-
-#group skills for printout: alphebetical groups, then within each group, alphabetical skills along with their ranks
