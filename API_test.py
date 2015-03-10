@@ -72,6 +72,7 @@ def load_credentials(filename):
 	char['characterID'] = f.readline()
 	char['keyID'] = f.readline()
 	char['vCode'] = f.readline()
+	f.close()
 
 build_skill_dictionary()
 load_credentials('sephrim_rega.txt')
