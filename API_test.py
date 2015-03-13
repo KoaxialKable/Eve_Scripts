@@ -2,32 +2,20 @@
 print('Importing libraries...')
 import requests
 import xml.etree.cElementTree as ET
-# from operator import itemgetter
-
-# payload = {'characterID': 94974374, 'userID': 3723024, 'apiKey': '6dTF197MfAXDUadEzcIUD49WcFXEhRSGTht7cV9qBJ38hEa3b7ksgMFZhmHPgbG2'}
-# r = requests.get("http://api.eveonline.com/eve/CharacterInfo.xml.aspx", params=payload)
-# root = ET.fromstring(r.text)
-# result = root.find("result")
+from xml.etree.ElementTree import ElementTree
 
 
-#get private character data
-# payload = {'characterID': 94974374, 'keyID': 3723024, 'vCode': '6dTF197MfAXDUadEzcIUD49WcFXEhRSGTht7cV9qBJ38hEa3b7ksgMFZhmHPgbG2'}
-# r = requests.get("http://api.eveonline.com/char/CharacterSheet.xml.aspx", params=payload)
-# charRoot = ET.fromstring(r.text)
-print('Accessing skills API...')
-skillTree = requests.get("https://api.eveonline.com/eve/SkillTree.xml.aspx")
-skillRoot = ET.fromstring(skillTree.text)
 
 skillDictionary = {}
 skillGroups = {}
 skills = {}
 charSkills = {}
-char = {'characterID': '', 'keyID': '', 'vCode': ''}
 
-def build_char_skill_list(payload):
-	print('Accessing character API...')
+
+def build_char_skill_list(credentials):
+	print('Accessing CharacterSheet API...')
 	# payload = {'characterID': characterID, 'keyID': keyID, 'vCode': vCode}
-	r = requests.get("http://api.eveonline.com/char/CharacterSheet.xml.aspx", params=payload)
+	r = requests.get("http://api.eveonline.com/char/CharacterSheet.xml.aspx", params=credentials)
 	charRoot = ET.fromstring(r.text)
 	for row in charRoot.find('.//rowset[@name="skills"]'):
 		#put skills in charSkills dictionary
@@ -38,7 +26,67 @@ def build_char_skill_list(payload):
 		#print('{} ({}) {} {}'.format(skillDictionary[skillID][1], skillDictionary[skillID][2], skillDictionary[skillID][0], level))
 		# charSkills = {skillID: [groupName (0), groupID (1), skillName (2), level (3)] }
 
+def char_wallet_journal(credentials):
+	print('Accessing WalletJournal API...')
+	r = requests.get("https://api.eveonline.com/char/WalletJournal.xml.aspx", params=credentials)
+	charRoot = ET.fromstring(r.text)
+	print('\n\nBOUNTIES:')
+	for row in charRoot.find('.//rowset[@name="transactions"]'):
+		if row.get('refTypeID') == '85' or row.get('refTypeID') == '17':
+			print('[{id}] ({date}) | Amount: {amount} | Tax: {tax} | System: {system}'.format(
+															id 		= row.get('refID'),
+															date	= row.get('date'), 
+															amount 	= row.get('amount').rjust(12), 
+															tax 	= row.get('taxAmount').rjust(9),
+															system 	= row.get('argName1')
+														 ))
+
+def corp_wallet_journal(credentials):
+	print('Accessing Corp WalletJournal API...')
+	r = requests.get("https://api.eveonline.com/corp/WalletJournal.xml.aspx", params=credentials)
+	wjRoot = ET.fromstring(r.text)
+	print('\n\nWithdrawals')
+	for row in wjRoot.find('.//rowset[@name="entries"]'):
+		if row.get('refTypeID') == '37':
+			print('({date}) | Amount: {amount} | Recipient: {recipient} | Performed by: {agent}'.format(
+															date		= row.get('date'),
+															amount 		= row.get('amount').rjust(14),
+															recipient 	= row.get('ownerName2').ljust(22),
+															agent 		= row.get('argName1').ljust(20)
+															))
+
+
+def get_all_trans(credentials):
+	first = None
+	r = requests.get("https://api.eveonline.com/corp/WalletJournal.xml.aspx", params=credentials)
+	wjRoot = ET.fromstring(r.text)
+	count = 0
+	for row in wjRoot.find('.//rowset[@name="entries"]'):
+		count += 1
+		fromID = row.get('refID')
+
+	while count != 0:
+		if first is None:
+			first = wjRoot
+		else:
+			first.extend(wjRoot)
+		credentials['fromID'] = fromID
+		r = requests.get("https://api.eveonline.com/corp/WalletJournal.xml.aspx", params=credentials)
+		wjRoot = ET.fromstring(r.text)
+		count = 0
+		for row in wjRoot.find('.//rowset[@name="entries"]'):
+			count += 1
+			fromID = row.get('refID')
+	return first
+
+	# 	print (ET.tostring(row))
+
+
+
 def build_skill_dictionary():
+	print('Accessing skills API...')
+	skillTree = requests.get("https://api.eveonline.com/eve/SkillTree.xml.aspx")
+	skillRoot = ET.fromstring(skillTree.text)
 	print('Building skill dictionary...')
 	for row in skillRoot.find('.//rowset[@name="skillGroups"]'):
 		for skillset in row.find('.//rowset[@name="skills"]'):
@@ -56,7 +104,7 @@ def lookup_group(search_id):
 def get_skill_level(skillName):
 	return(int(charSkills[skillName]))
 
-def display_char_skills(group):
+def display_char_skills(group=''):
 	if group == '':
 		print('\nAll skill groups:')
 		for l in sorted(charSkills.values()):
@@ -67,15 +115,34 @@ def display_char_skills(group):
 			if (l[0] == group):
 				print('   {}: {}'.format(l[2], l[3]))
 
-def load_credentials(filename):
+def load_char_credentials(filename):
+	char = {'characterID': '', 'keyID': '', 'vCode': ''}
 	f = open(filename, 'r')
 	char['characterID'] = f.readline()
 	char['keyID'] = f.readline()
 	char['vCode'] = f.readline()
 	f.close()
+	return char
 
-build_skill_dictionary()
-load_credentials('sephrim_rega.txt')
-build_char_skill_list(char)
-display_char_skills('')
+def load_corp_credentials(filename):
+	print('Authenticating for Corp APIs...')
+	corp = {'keyID': '', 'vCode': ''}
+	f = open(filename, 'r')
+	corp['keyID'] = f.readline()
+	corp['vCode'] = f.readline()
+	f.close()
+	return corp
+
+
+# build_skill_dictionary()
+# char = load_char_credentials('my_char.txt')
+corp = load_corp_credentials('my_corp.txt')
+# build_char_skill_list(char)
+# char_wallet_journal(char)
+# display_char_skills()
 # print(get_skill_level('Retail'))
+# corp_wallet_journal(corp)
+XML_Dump = get_all_trans(corp)
+tree = ElementTree()
+tree._setroot(XML_Dump)
+tree.write("xmldump2.xml")
