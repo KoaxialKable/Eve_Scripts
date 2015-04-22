@@ -1,0 +1,5 @@
+# API Key-files
+*.txt
+
+# My personal database
+*.db
