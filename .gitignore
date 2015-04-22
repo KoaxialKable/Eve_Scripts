@@ -1,5 +1,9 @@
-# API Key-files
-*.txt
+# Test key-files
+/API Tests/*.txt
+
+# EPAAG Key-file folders
+/EPAAG/chars/
+/EPAAG/corps/
 
 # My personal database
 *.db
