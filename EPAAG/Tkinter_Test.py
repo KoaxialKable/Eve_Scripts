@@ -2,7 +2,6 @@
 from tkinter import *
 import requests
 import xml.etree.cElementTree as ET
-from xml.etree.ElementTree import ElementTree
 import sqlite3 as lite
 
 DB_NAME = 'myEVEdb.db'
