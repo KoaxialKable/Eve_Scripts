@@ -7,3 +7,6 @@
 
 # My personal database
 *.db
+
+# other test files
+/API Tests/*.xml

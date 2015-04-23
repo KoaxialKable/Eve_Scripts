@@ -1,8 +1,9 @@
 #! /usr/bin/env python
-print('Importing libraries...')
+# print('Importing libraries...')
 import requests
 import xml.etree.cElementTree as ET
 from xml.etree.ElementTree import ElementTree
+import sqlite3 as lite
 
 
 
@@ -57,6 +58,7 @@ def corp_wallet_journal(credentials):
 
 
 def get_all_trans(credentials):
+	print('Pulling all WalletJournal entries...')
 	first = None
 	r = requests.get("https://api.eveonline.com/corp/WalletJournal.xml.aspx", params=credentials)
 	wjRoot = ET.fromstring(r.text)
@@ -135,14 +137,38 @@ def load_corp_credentials(filename):
 
 
 # build_skill_dictionary()
-# char = load_char_credentials('my_char.txt')
-corp = load_corp_credentials('my_corp.txt')
+char = load_char_credentials('my_char.txt')
+# corp = load_corp_credentials('my_corp.txt')
 # build_char_skill_list(char)
 # char_wallet_journal(char)
 # display_char_skills()
 # print(get_skill_level('Retail'))
 # corp_wallet_journal(corp)
-XML_Dump = get_all_trans(corp)
-tree = ElementTree()
-tree._setroot(XML_Dump)
-tree.write("xmldump2.xml")
+# print("'walletJournal.xml' updated.")
+
+
+r = requests.get("https://api.eveonline.com/char/SkillInTraining.xml.aspx", params=char)
+root = ET.fromstring(r.text)
+
+print(len(list(root[1])))
+
+# DB_NAME = (r'..\myEVEdb.db')
+# conn = lite.connect(DB_NAME)
+# curs = conn.cursor()
+
+# query = "select sum(skillpoints) from pilot_skill"
+# curs.execute(query)
+# for row in curs.fetchall():
+# 	print('{:,} total skillpoints'.format(int(row[0])))
+
+
+# query = "select count(*) from pilot_skill where skillLevel > 0"
+# curs.execute(query)
+# for row in curs.fetchall():
+# 	print('{} total trained skills'.format(int(row[0])))
+
+# query = "select * from key"
+# curs.execute(query)
+# for row in curs.fetchall():
+# 	print(row)
+# conn.close()
